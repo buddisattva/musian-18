@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -23,16 +24,12 @@ type result struct {
 
 var resultMap sync.Map
 
-var wg *sync.WaitGroup
-
 var channelH1 = make(chan result)
 var channelMetaDes = make(chan result)
 var channelTitle = make(chan result)
 
 func main() {
 	repository := repository{}
-
-	wg = &sync.WaitGroup{}
 
 	go handleH1()
 	go handleMetaDes()
@@ -44,6 +41,22 @@ func main() {
 	}
 
 	scrape(URLs)
+
+	log.Println("Wait...")
+	for range time.Tick(5 * time.Second) { // block here to wait for all scrapers have done their jobs
+		count := 0
+
+		resultMap.Range(func(key, value interface{}) bool {
+			count++
+			return true
+		})
+
+		log.Printf("%d results in map", count)
+
+		if count >= len(URLs) {
+			break // stop blocking
+		}
+	}
 
 	contents := make([][]string, 0, len(URLs))
 	resultMap.Range(func(key, value interface{}) bool {
@@ -75,18 +88,12 @@ func main() {
 
 		contents = append(contents, row)
 
-		wg.Done()
-
 		return true
 	})
 
 	if err := repository.writeCSVToFile(OutputCSVFile, contents); err != nil {
 		panic(err)
 	}
-
-	log.Println("Wait...")
-
-	wg.Wait()
 
 	log.Println("Done.")
 }
@@ -101,27 +108,32 @@ func scrape(URLs []string) {
 	c.DisableCookies()
 
 	c.WithTransport(&http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
 	})
 
-	c.SetRequestTimeout(60 * time.Second)
+	c.SetRequestTimeout(30 * time.Second)
 
-	c.Limit(&colly.LimitRule{DomainGlob: "*altair.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*ansys.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*broadcom.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*cadence*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*dialog-semiconductor.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*siemens.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "globalfoundries.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*marvell.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*nvidia.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*qualcomm.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*realtek.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*silvaco.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*synopsys.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*tsmc.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*umc.*", Parallelism: 30, RandomDelay: 2 * time.Second})
-	c.Limit(&colly.LimitRule{DomainGlob: "*xilinx.*", Parallelism: 30, RandomDelay: 2 * time.Second})
+	c.Limits([]*colly.LimitRule{
+		{DomainGlob: "*altair.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*ansys.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*broadcom.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*cadence*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*dialog-semiconductor.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*siemens.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "globalfoundries.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*marvell.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*mediatek.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*novatek.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*nvidia.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*qualcomm.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*realtek.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*silvaco.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*synopsys.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*tsmc.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*umc.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*xilinx.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+	})
 
 	c.OnHTML("h1", func(e *colly.HTMLElement) {
 		channelH1 <- result{
@@ -145,7 +157,7 @@ func scrape(URLs []string) {
 	})
 
 	c.OnScraped(func(r *colly.Response) {
-		log.Println("Scraped: " + r.Request.URL.String())
+		// log.Println("Scraped: " + r.Request.URL.String())
 	})
 
 	header := http.Header{}
@@ -158,14 +170,16 @@ func scrape(URLs []string) {
 
 	c.OnError(func(r *colly.Response, e error) {
 		if r.Request.URL.Host == "" ||
-			r.StatusCode > 399 || r.StatusCode < 408 ||
-			r.StatusCode > 408 || r.StatusCode < 600 {
-			log.Println("Skip: " + r.Request.URL.String())
+			(r.StatusCode > 399 && r.StatusCode < 408) ||
+			(r.StatusCode > 408 && r.StatusCode < 600) {
+			log.Printf("Status: %d Skip: %s\n", r.StatusCode, r.Request.URL.String())
+
+			skipMsg := fmt.Sprintf("{skip_%d}", r.StatusCode)
 
 			resultMap.Store(r.Request.URL.String(), result{
-				H1:      "{skip}",
-				MetaDes: "{skip}",
-				Title:   "{skip}",
+				H1:      skipMsg,
+				MetaDes: skipMsg,
+				Title:   skipMsg,
 				URL:     r.Request.URL.String(),
 			})
 
@@ -178,11 +192,8 @@ func scrape(URLs []string) {
 	})
 
 	for _, URL := range URLs {
-		wg.Add(1)
 		c.Request("GET", URL, nil, nil, header)
 	}
-
-	c.Wait()
 }
 
 func handleH1() {
