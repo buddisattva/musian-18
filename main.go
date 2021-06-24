@@ -24,6 +24,8 @@ type result struct {
 
 var resultMap sync.Map
 
+var retryTimesMap sync.Map
+
 var channelH1 = make(chan result)
 var channelMetaDes = make(chan result)
 var channelTitle = make(chan result)
@@ -115,24 +117,24 @@ func scrape(URLs []string) {
 	c.SetRequestTimeout(30 * time.Second)
 
 	c.Limits([]*colly.LimitRule{
-		{DomainGlob: "*altair.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*ansys.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*broadcom.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*cadence*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*dialog-semiconductor.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*siemens.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "globalfoundries.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*marvell.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*mediatek.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*novatek.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*nvidia.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*qualcomm.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*realtek.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*silvaco.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*synopsys.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*tsmc.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*umc.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*xilinx.*", Parallelism: 30, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*altair.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*ansys.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*broadcom.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*cadence*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*dialog-semiconductor.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*siemens.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "globalfoundries.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*marvell.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*mediatek.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*novatek.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*nvidia.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*qualcomm.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*realtek.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*silvaco.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*synopsys.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*tsmc.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*umc.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*xilinx.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
 	})
 
 	c.OnHTML("h1", func(e *colly.HTMLElement) {
@@ -169,18 +171,20 @@ func scrape(URLs []string) {
 	header.Add("Connection", "keep-alive")
 
 	c.OnError(func(r *colly.Response, e error) {
+		thisURL := r.Request.URL.String()
+
 		if r.Request.URL.Host == "" ||
 			(r.StatusCode > 399 && r.StatusCode < 408) ||
 			(r.StatusCode > 408 && r.StatusCode < 600) {
-			log.Printf("Status: %d Skip: %s\n", r.StatusCode, r.Request.URL.String())
+			log.Printf("Status: %d Skip: %s\n", r.StatusCode, thisURL)
 
 			skipMsg := fmt.Sprintf("{skip_%d}", r.StatusCode)
 
-			resultMap.Store(r.Request.URL.String(), result{
+			resultMap.Store(thisURL, result{
 				H1:      skipMsg,
 				MetaDes: skipMsg,
 				Title:   skipMsg,
-				URL:     r.Request.URL.String(),
+				URL:     thisURL,
 			})
 
 			return
@@ -189,25 +193,46 @@ func scrape(URLs []string) {
 		if strings.Contains(e.Error(), "no such host") {
 			skipMsg := "skip_no_such_host"
 
-			resultMap.Store(r.Request.URL.String(), result{
+			resultMap.Store(thisURL, result{
 				H1:      skipMsg,
 				MetaDes: skipMsg,
 				Title:   skipMsg,
-				URL:     r.Request.URL.String(),
+				URL:     thisURL,
 			})
 
 			return
 		}
 
-		log.Printf("Error on %s ||| %+v", r.Request.URL.String(), e)
+		log.Printf("Error on %s ||| %+v", thisURL, e)
 
-		c.Request("GET", r.Request.URL.String(), nil, nil, header) // retry
+		if retryTimes, exists := retryTimesMap.Load(thisURL); exists {
+			retryTimesInt := retryTimes.(int)
+
+			if retryTimesInt > 10 {
+				skipMsg := "skip_more_than_10_retries"
+
+				resultMap.Store(thisURL, result{
+					H1:      skipMsg,
+					MetaDes: skipMsg,
+					Title:   skipMsg,
+					URL:     thisURL,
+				})
+
+				return
+			}
+
+			retryTimesMap.Store(thisURL, retryTimesInt+1)
+		} else {
+			retryTimesMap.Store(thisURL, 1)
+		}
+
+		c.Request("GET", thisURL, nil, nil, header) // retry
 	})
 
-	c.Request("GET", "https://qtime.qualcomm.com/login.jsp", nil, nil, header)
-	// for _, URL := range URLs {
-	// 	c.Request("GET", URL, nil, nil, header)
-	// }
+	log.Printf("Start with %d URLs\n.", len(URLs))
+	for _, URL := range URLs {
+		c.Request("GET", URL, nil, nil, header)
+	}
 }
 
 func handleH1() {
