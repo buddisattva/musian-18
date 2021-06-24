@@ -229,7 +229,7 @@ func scrape(URLs []string) {
 		c.Request("GET", thisURL, nil, nil, header) // retry
 	})
 
-	log.Printf("Start with %d URLs\n.", len(URLs))
+	log.Printf("Start with %d URLs\n", len(URLs))
 	for _, URL := range URLs {
 		c.Request("GET", URL, nil, nil, header)
 	}
