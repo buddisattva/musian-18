@@ -186,14 +186,28 @@ func scrape(URLs []string) {
 			return
 		}
 
+		if strings.Contains(e.Error(), "no such host") {
+			skipMsg := "skip_no_such_host"
+
+			resultMap.Store(r.Request.URL.String(), result{
+				H1:      skipMsg,
+				MetaDes: skipMsg,
+				Title:   skipMsg,
+				URL:     r.Request.URL.String(),
+			})
+
+			return
+		}
+
 		log.Printf("Error on %s ||| %+v", r.Request.URL.String(), e)
 
 		c.Request("GET", r.Request.URL.String(), nil, nil, header) // retry
 	})
 
-	for _, URL := range URLs {
-		c.Request("GET", URL, nil, nil, header)
-	}
+	c.Request("GET", "https://qtime.qualcomm.com/login.jsp", nil, nil, header)
+	// for _, URL := range URLs {
+	// 	c.Request("GET", URL, nil, nil, header)
+	// }
 }
 
 func handleH1() {
