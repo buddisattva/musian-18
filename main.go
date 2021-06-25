@@ -24,8 +24,6 @@ type result struct {
 
 var resultMap sync.Map
 
-var retryTimesMap sync.Map
-
 var channelH1 = make(chan result)
 var channelMetaDes = make(chan result)
 var channelTitle = make(chan result)
@@ -43,22 +41,6 @@ func main() {
 	}
 
 	scrape(URLs)
-
-	log.Println("Wait...")
-	for range time.Tick(5 * time.Second) { // block here to wait for all scrapers have done their jobs
-		count := 0
-
-		resultMap.Range(func(key, value interface{}) bool {
-			count++
-			return true
-		})
-
-		log.Printf("%d results in map", count)
-
-		if count >= len(URLs) {
-			break // stop blocking
-		}
-	}
 
 	contents := make([][]string, 0, len(URLs))
 	resultMap.Range(func(key, value interface{}) bool {
@@ -114,27 +96,27 @@ func scrape(URLs []string) {
 		DisableKeepAlives: true,
 	})
 
-	c.SetRequestTimeout(30 * time.Second)
+	c.SetRequestTimeout(25 * time.Second)
 
 	c.Limits([]*colly.LimitRule{
-		{DomainGlob: "*altair.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*ansys.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*broadcom.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*cadence*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*dialog-semiconductor.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*siemens.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "globalfoundries.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*marvell.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*mediatek.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*novatek.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*nvidia.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*qualcomm.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*realtek.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*silvaco.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*synopsys.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*tsmc.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*umc.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
-		{DomainGlob: "*xilinx.*", Parallelism: 10, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*altair.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*ansys.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*broadcom.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*cadence*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*dialog-semiconductor.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*siemens.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "globalfoundries.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*marvell.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*mediatek.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*novatek.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*nvidia.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*qualcomm.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*realtek.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*silvaco.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*synopsys.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*tsmc.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*umc.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
+		{DomainGlob: "*xilinx.*", Parallelism: 15, Delay: 1 * time.Second, RandomDelay: 1 * time.Second},
 	})
 
 	c.OnHTML("h1", func(e *colly.HTMLElement) {
@@ -158,10 +140,6 @@ func scrape(URLs []string) {
 		}
 	})
 
-	c.OnScraped(func(r *colly.Response) {
-		// log.Println("Scraped: " + r.Request.URL.String())
-	})
-
 	header := http.Header{}
 	header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0")
 	header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
@@ -176,7 +154,6 @@ func scrape(URLs []string) {
 		if r.Request.URL.Host == "" ||
 			(r.StatusCode > 399 && r.StatusCode < 408) ||
 			(r.StatusCode > 408 && r.StatusCode < 600) {
-			log.Printf("Status: %d Skip: %s\n", r.StatusCode, thisURL)
 
 			skipMsg := fmt.Sprintf("{skip_%d}", r.StatusCode)
 
@@ -205,26 +182,7 @@ func scrape(URLs []string) {
 
 		log.Printf("Error on %s ||| %+v", thisURL, e)
 
-		if retryTimes, exists := retryTimesMap.Load(thisURL); exists {
-			retryTimesInt := retryTimes.(int)
-
-			if retryTimesInt > 10 {
-				skipMsg := "skip_more_than_10_retries"
-
-				resultMap.Store(thisURL, result{
-					H1:      skipMsg,
-					MetaDes: skipMsg,
-					Title:   skipMsg,
-					URL:     thisURL,
-				})
-
-				return
-			}
-
-			retryTimesMap.Store(thisURL, retryTimesInt+1)
-		} else {
-			retryTimesMap.Store(thisURL, 1)
-		}
+		time.Sleep(3 * time.Second)
 
 		c.Request("GET", thisURL, nil, nil, header) // retry
 	})
@@ -233,6 +191,8 @@ func scrape(URLs []string) {
 	for _, URL := range URLs {
 		c.Request("GET", URL, nil, nil, header)
 	}
+
+	c.Wait()
 }
 
 func handleH1() {
